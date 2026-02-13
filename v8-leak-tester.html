@@ -1,0 +1,92 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>V8 Leak Tester</title>
+</head>
+
+<body>
+  <h1>V8 Leak Tester</h1>
+  <div id="status">Ready</div>
+  <pre id="log" style="background: #f4f4f4; padding: 15px; border-radius: 5px;"></pre>
+  <div id="summary"></div>
+
+  <script>
+    const MAX_RELOADS = 10;
+    const logNode = document.getElementById('log');
+    const statusNode = document.getElementById('status');
+    const summaryNode = document.getElementById('summary');
+
+    function print(msg) { logNode.innerText += msg + "\n"; }
+    function getMem() { return performance.memory.usedJSHeapSize; }
+
+    async function callGc() {
+      statusNode.innerText = "Calling GC...";
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      gc(); gc(); gc();
+    }
+
+    async function run() {
+      if (typeof gc !== 'function') {
+        statusNode.innerHTML = "<b style='color:red'>FAILED: gc() not found.</b>";
+        print("Start Chrome with: --js-flags=\"--expose-gc\"");
+        return;
+      }
+
+      let count = parseInt(localStorage.getItem('reload_iteration') || '0');
+
+      // 1. Establish Baseline on first run
+      if (count === 0) {
+        await callGc();
+        const baseline = getMem();
+        localStorage.setItem('leak_baseline', baseline);
+        localStorage.setItem('reload_iteration', 1);
+        print("Baseline set. Reloading...");
+        location.reload();
+        return;
+      }
+
+      // 2. Perform intermediate reloads
+      if (count < MAX_RELOADS) {
+        statusNode.innerText = `Iteration ${count} / ${MAX_RELOADS}`;
+        localStorage.setItem('reload_iteration', count + 1);
+
+        // create objects that likely hold onto the context
+        window.leakyReference = () => console.log("I keep the scope alive");
+
+        location.reload();
+      }
+      // 3. Final Analysis
+      else {
+        statusNode.innerText = "Analysis Complete.";
+        await callGc();
+
+        const finalMem = getMem();
+        const baseline = parseInt(localStorage.getItem('leak_baseline'));
+        const diffBytes = finalMem - baseline;
+        const diffMB = (diffBytes / 1024 / 1024).toFixed(3);
+
+        print("=== TEST RESULTS ===");
+        print(`Initial Baseline: ${(baseline / 1024 / 1024).toFixed(3)} MB`);
+        print(`Final Memory:     ${(finalMem / 1024 / 1024).toFixed(3)} MB`);
+        print(`----------------------------`);
+        print(`Total Leaked:     ${diffMB} MB`);
+
+        if (diffMB > 0.1) {
+          summaryNode.innerHTML = "<b style='color:red'>Leak detected</b>";
+        } else {
+          summaryNode.innerHTML = "<b style='color:green'>No significant growth detected.</b>";
+        }
+
+        // Reset for next manual test
+        localStorage.removeItem('reload_iteration');
+        localStorage.removeItem('leak_baseline');
+      }
+    }
+
+    window.onload = () => setTimeout(run, 100); // Small buffer for performance.memory to update
+  </script>
+</body>
+
+</html>
