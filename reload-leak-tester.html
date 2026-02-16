@@ -18,10 +18,10 @@
         setTimeout(() => {
           gc();gc();gc();
           statusNode.innerText = "usedJSHeapSize: " + (performance.memory.usedJSHeapSize / 1000 / 1000).toFixed(2) + " MB";
-        }, 1000);
+        }, 2000);
         setTimeout(() => {
           location.reload();
-        }, 2000);
+        }, 3000);
       }
   </script>
 </body>
