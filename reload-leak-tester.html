@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <title>Reload Leak Tester</title>
+</head>
+
+<body>
+  <div>
+    <h1>Reload Leak Tester</h1>
+    <div id="status"></div>
+  </div><script>
+      const statusNode = document.getElementById('status');
+      if (typeof gc !== 'function') {
+        statusNode.innerHTML = "<b style='color:red'>FAILED: gc() not found.</b>";
+      } else {
+        statusNode.innerText = "Running...";
+        setTimeout(() => {
+          statusNode.innerText = "usedJSHeapSize: " + (performance.memory.usedJSHeapSize / 1000 / 1000).toFixed(2) + " MB";
+        }, 1000);
+        setTimeout(() => {
+          location.reload();
+        }, 3000);
+      }
+  </script>
+</body>
+
+</html>
