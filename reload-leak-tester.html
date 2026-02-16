@@ -9,20 +9,105 @@
   <div>
     <h1>Reload Leak Tester</h1>
     <div id="status"></div>
-  </div><script>
-      const statusNode = document.getElementById('status');
-      if (typeof gc !== 'function') {
-        statusNode.innerHTML = "<b style='color:red'>FAILED: gc() not found.</b>";
-      } else {
-        statusNode.innerText = "Running...";
-        setTimeout(() => {
-          gc();gc();gc();
-          statusNode.innerText = "usedJSHeapSize: " + (performance.memory.usedJSHeapSize / 1000 / 1000).toFixed(2) + " MB";
-        }, 2000);
-        setTimeout(() => {
+    <button id="startBtn" type="button">Start measurement</button>
+    <pre id="results"></pre>
+  </div>
+  <script>
+    const STORAGE_KEY = 'leakTestResults';
+    const RUNNING_KEY = 'leakTestRunning';
+    const statusNode = document.getElementById('status');
+    const resultsNode = document.getElementById('results');
+    const startBtn = document.getElementById('startBtn');
+
+    function getStoredResults() {
+      try {
+        return localStorage.getItem(STORAGE_KEY) || '';
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function appendResult(line) {
+      const existing = getStoredResults();
+      const updated = existing ? existing + '\n' + line : line;
+      try {
+        localStorage.setItem(STORAGE_KEY, updated);
+      } catch (e) {
+        statusNode.innerHTML = "<b style='color:red'>Failed to save: " + e.message + "</b>";
+      }
+    }
+
+    function renderResults() {
+      resultsNode.textContent = getStoredResults() || '(no results yet)';
+    }
+
+    function isRunning() {
+      try {
+        return sessionStorage.getItem(RUNNING_KEY) === '1';
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function setRunning(value) {
+      try {
+        if (value) {
+          sessionStorage.setItem(RUNNING_KEY, '1');
+        } else {
+          sessionStorage.removeItem(RUNNING_KEY);
+        }
+      } catch (e) {}
+    }
+
+    renderResults();
+
+    if (typeof gc !== 'function') {
+      statusNode.innerHTML = "<b style='color:red'>Warning: gc() not found. Run with --js-flags=\"--expose-gc\"</b>";
+      startBtn.disabled = true;
+    } else {
+      let measureTimeoutId = null;
+
+      function runMeasurement() {
+        statusNode.textContent = 'Measuring...';
+        startBtn.textContent = 'Stop';
+        measureTimeoutId = setTimeout(function () {
+          if (typeof gc === 'function') {
+            gc();gc();gc();
+          }
+          const mb = (performance.memory.usedJSHeapSize / 1000 / 1000).toFixed(2);
+          const line = 'usedJSHeapSize: ' + mb + ' MB';
+          appendResult(line);
           location.reload();
         }, 3000);
       }
+
+      function stopMeasurement() {
+        if (measureTimeoutId !== null) {
+          clearTimeout(measureTimeoutId);
+          measureTimeoutId = null;
+        }
+        setRunning(false);
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+        } catch (e) {}
+        resultsNode.textContent = resultsNode.textContent || '(no results yet)';
+        statusNode.textContent = 'Stopped';
+        startBtn.textContent = 'Start measurement';
+      }
+
+      startBtn.addEventListener('click', function () {
+        if (isRunning()) {
+          stopMeasurement();
+        } else {
+          setRunning(true);
+          runMeasurement();
+        }
+      });
+
+      if (isRunning()) {
+        runMeasurement();
+      }
+    }
   </script>
 </body>
 
