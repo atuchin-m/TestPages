@@ -16,6 +16,7 @@
       } else {
         statusNode.innerText = "Running...";
         setTimeout(() => {
+          gc();gc();gc();
           statusNode.innerText = "usedJSHeapSize: " + (performance.memory.usedJSHeapSize / 1000 / 1000).toFixed(2) + " MB";
         }, 1000);
         setTimeout(() => {
