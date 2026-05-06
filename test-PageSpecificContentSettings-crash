@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Blacklisted Geolocation</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" type="text/css" href="blocklisting.css">
+  </head>
+  <body>
+    <button id="requestBtn" class="status">Click to request!</button>
+
+    <script>
+      document.getElementById("requestBtn").addEventListener('click', function(e) {
+        var target = e.target;
+        target.parentElement.classList.remove('default', 'granted', 'denied');
+
+        navigator.geolocation.getCurrentPosition(function(position) {
+          console.log(position);
+          target.innerText = "Permission granted";
+          target.classList.add("granted");
+        }, function() {
+          target.innerText = "Permission blocked";
+          target.classList.add("denied");
+        });
+      });
+
+      // Unload handler with 100ms delay
+      window.addEventListener("unload", function (event) {
+        setTimeout(function () {
+          console.log("Page is unloading (delayed 100ms)");
+          // Put your cleanup logic here
+        }, 100);
+      });
+    </script>
+  </body>
+</html>
