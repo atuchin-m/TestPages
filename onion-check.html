@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <link rel="dns-prefetch" href="https://example.onion/">
-  </head>
-  <body></body>
+  <body>
+    <script>
+      const pc = new RTCPeerConnection({iceServers: [{urls: 'stun:example.onion:19302'}]});
+      pc.createDataChannel('x');
+      pc.createOffer().then(d => pc.setLocalDescription(d));
+    </script>
+  </body>
 </html>
